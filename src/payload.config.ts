@@ -39,13 +39,30 @@ const createLog =
   }
 
 const cloudflareLogger = {
-  level: process.env.PAYLOAD_LOG_LEVEL || 'info',
+  level: process.env.PAYLOAD_LOG_LEVEL || 'debug',
   trace: createLog('trace', console.debug),
   debug: createLog('debug', console.debug),
   info: createLog('info', console.log),
   warn: createLog('warn', console.warn),
-  error: createLog('error', console.error),
-  fatal: createLog('fatal', console.error),
+  error: (objOrMsg: object | string, msg?: string) => {
+    // Always log errors with full stack traces
+    if (objOrMsg instanceof Error) {
+      console.error(
+        JSON.stringify({ level: 'error', msg: objOrMsg.message, stack: objOrMsg.stack }),
+      )
+    } else {
+      createLog('error', console.error)(objOrMsg, msg)
+    }
+  },
+  fatal: (objOrMsg: object | string, msg?: string) => {
+    if (objOrMsg instanceof Error) {
+      console.error(
+        JSON.stringify({ level: 'fatal', msg: objOrMsg.message, stack: objOrMsg.stack }),
+      )
+    } else {
+      createLog('fatal', console.error)(objOrMsg, msg)
+    }
+  },
   silent: () => {},
 } as any // Use PayloadLogger type when it's exported
 
@@ -136,21 +153,12 @@ export default buildConfig({
         },
       },
     }),
-    formBuilderPlugin({
-      fields: {
-        payment: false,
-      },
-      formOverrides: {
-        admin: {
-          group: 'Formularios',
-        },
-      },
-      formSubmissionOverrides: {
-        admin: {
-          group: 'Formularios',
-        },
-      },
-    }),
+    // formBuilderPlugin disabled temporarily for debugging
+    // formBuilderPlugin({
+    //   fields: { payment: false },
+    //   formOverrides: { admin: { group: 'Formularios' } },
+    //   formSubmissionOverrides: { admin: { group: 'Formularios' } },
+    // }),
   ],
 })
 
