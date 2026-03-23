@@ -20,7 +20,8 @@
       "binding": "D1",
       "database_id": "f1c13795-8799-4700-90f1-8638598e1667",
       "database_name": "babymundi-payload",
-      "remote": true,
+      // Descomenta para usar el D1 remoto de Cloudflare también en local:
+      // "remote": true,
     },
   ],
   "services": [
@@ -33,7 +34,8 @@
   "r2_buckets": [
     {
       "binding": "R2",
-      "bucket_name": "babymundi-assets","preview_bucket_name": "babymundi-assets",
+      "bucket_name": "babymundi-assets",
+      "preview_bucket_name": "babymundi-assets",
     },
     // Create a R2 binding with the binding name "NEXT_INC_CACHE_R2_BUCKET"
     // {

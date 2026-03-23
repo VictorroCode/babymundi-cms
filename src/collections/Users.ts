@@ -5,9 +5,22 @@ export const Users: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
   },
-  auth: true,
+  auth: {
+    useAPIKey: true,
+  },
   fields: [
-    // Email added by default
-    // Add more fields as needed
+    {
+      name: 'role',
+      type: 'select',
+      label: 'Rol',
+      options: [
+        { label: 'Administrador', value: 'admin' },
+        { label: 'Editor', value: 'editor' },
+      ],
+      defaultValue: 'editor',
+      required: true,
+      saveToJWT: true,
+      admin: { position: 'sidebar' },
+    },
   ],
 }

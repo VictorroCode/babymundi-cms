@@ -1,15 +1,26 @@
 import fs from 'fs'
 import path from 'path'
 import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
+import { es } from '@payloadcms/translations/languages/es'
+import { en } from '@payloadcms/translations/languages/en'
 import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
 import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
+import { seoPlugin } from '@payloadcms/plugin-seo'
+import { searchPlugin } from '@payloadcms/plugin-search'
+import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
+import { richEditor } from './fields/richTextEditors'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Authors } from './collections/Authors'
+import { Categories } from './collections/Categories'
+import { Pages } from './collections/Pages'
+import { Posts } from './collections/Posts'
+import { Products } from './collections/Products'
+import { Stores } from './collections/Stores'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -40,18 +51,51 @@ const cloudflareLogger = {
 
 const cloudflare =
   isCLI || !isProduction
-    ? await getCloudflareContextFromWrangler()
+    ? await getCloudflareContextFromWrangler(
+        isProduction || process.env.CLOUDFLARE_REMOTE === 'true',
+      )
     : await getCloudflareContext({ async: true })
 
 export default buildConfig({
   admin: {
     user: Users.slug,
+    meta: {
+      titleSuffix: '— babymundi',
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      graphics: {
+        Logo: '/components/Logo',
+        Icon: '/components/Icon',
+      },
+    },
+    livePreview: {
+      // Colecciones que tienen vista previa en el panel
+      collections: ['posts', 'products', 'stores', 'pages'],
+      breakpoints: [
+        { label: 'Móvil', name: 'mobile', width: 375, height: 667 },
+        { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
+        { label: 'Escritorio', name: 'desktop', width: 1440, height: 900 },
+      ],
+    },
   },
-  collections: [Users, Media],
-  editor: lexicalEditor(),
+  // Permite que la web de Astro llame a la API de Payload
+  cors: [
+    process.env.FRONTEND_URL || 'http://localhost:4321',
+    'http://localhost:4321', // Astro dev server
+  ].filter(Boolean),
+  // Permite embeber el admin en iframes desde el dominio de Astro (livePreview)
+  csrf: [process.env.FRONTEND_URL || 'http://localhost:4321', 'http://localhost:4321'].filter(
+    Boolean,
+  ),
+  i18n: {
+    supportedLanguages: { es, en },
+    fallbackLanguage: 'es',
+  },
+  collections: [Users, Media, Authors, Categories, Pages, Posts, Products, Stores],
+  editor: richEditor,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
@@ -63,16 +107,60 @@ export default buildConfig({
       bucket: cloudflare.env.R2,
       collections: { media: true },
     }),
+    seoPlugin({
+      collections: ['posts', 'products', 'stores', 'pages'],
+      generateTitle: ({ doc }) => `${doc?.title} | Babymundi`,
+      generateDescription: ({ doc }) => doc?.excerpt || doc?.description || '',
+      generateURL: ({ doc, collectionConfig }) => {
+        const paths: Record<string, string> = {
+          posts: 'blog',
+          products: 'productos',
+          stores: 'tiendas',
+          pages: '',
+        }
+        const base = process.env.FRONTEND_URL || ''
+        const prefix = paths[collectionConfig.slug] ?? collectionConfig.slug
+        return prefix ? `${base}/${prefix}/${doc?.slug}` : `${base}/${doc?.slug}`
+      },
+    }),
+    searchPlugin({
+      collections: ['posts', 'products', 'stores'],
+      defaultPriorities: {
+        posts: 10,
+        products: 20,
+        stores: 30,
+      },
+      searchOverrides: {
+        admin: {
+          group: 'Utilidades',
+        },
+      },
+    }),
+    formBuilderPlugin({
+      fields: {
+        payment: false,
+      },
+      formOverrides: {
+        admin: {
+          group: 'Formularios',
+        },
+      },
+      formSubmissionOverrides: {
+        admin: {
+          group: 'Formularios',
+        },
+      },
+    }),
   ],
 })
 
 // Adapted from https://github.com/opennextjs/opennextjs-cloudflare/blob/d00b3a13e42e65aad76fba41774815726422cc39/packages/cloudflare/src/api/cloudflare-context.ts#L328C36-L328C46
-function getCloudflareContextFromWrangler(): Promise<CloudflareContext> {
+function getCloudflareContextFromWrangler(remoteBindings = false): Promise<CloudflareContext> {
   return import(/* webpackIgnore: true */ `${'__wrangler'.replaceAll('_', '')}`).then(
     ({ getPlatformProxy }) =>
       getPlatformProxy({
         environment: process.env.CLOUDFLARE_ENV,
-        remoteBindings: isProduction,
+        remoteBindings,
       } satisfies GetPlatformProxyOptions),
   )
 }

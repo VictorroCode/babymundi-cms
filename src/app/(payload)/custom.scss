@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Chelsea+Market&display=swap');
+
+.bm-logo {
+  font-family: 'Chelsea Market', cursive;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--theme-text);
+  letter-spacing: 0.01em;
+  line-height: 1;
+  user-select: none;
+  display: block;
+  padding: 0.25rem 0;
+  white-space: nowrap;
+}
+
+/* Ampliar el contenedor del logo en el sidebar de Payload */
+.nav__wrap .nav__header,
+.nav__header {
+  min-width: 160px;
+  width: auto;
+}
+
+.nav__logo {
+  overflow: visible;
+  width: auto;
+  min-width: 140px;
+}
+
+.bm-icon {
+  font-family: 'Chelsea Market', cursive;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--theme-text);
+  line-height: 1;
+  user-select: none;
+}
