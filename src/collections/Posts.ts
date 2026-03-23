@@ -8,9 +8,6 @@ export const Posts: CollectionConfig = {
     group: 'Contenido',
     defaultColumns: ['title', 'author', 'publishedAt', 'status'],
     preview: (doc) => `${process.env.FRONTEND_URL}/blog/${doc?.slug}`,
-    livePreview: {
-      url: ({ data }) => `${process.env.FRONTEND_URL}/blog/${data?.slug}`,
-    },
   },
   access: {
     read: ({ req }) => {

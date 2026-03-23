@@ -11,12 +11,6 @@ export const Pages: CollectionConfig = {
       const slug = doc?.slug === 'home' ? '' : doc?.slug
       return `${process.env.FRONTEND_URL}/${slug}`
     },
-    livePreview: {
-      url: ({ data }) => {
-        const slug = data?.slug === 'home' ? '' : data?.slug
-        return `${process.env.FRONTEND_URL}/${slug}`
-      },
-    },
   },
   access: {
     read: () => true,

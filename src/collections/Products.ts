@@ -8,9 +8,6 @@ export const Products: CollectionConfig = {
     group: 'Contenido',
     defaultColumns: ['title', 'brand', 'price', 'status'],
     preview: (doc) => `${process.env.FRONTEND_URL}/productos/${doc?.slug}`,
-    livePreview: {
-      url: ({ data }) => `${process.env.FRONTEND_URL}/productos/${data?.slug}`,
-    },
   },
   access: {
     read: () => true,

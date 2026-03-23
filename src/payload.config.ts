@@ -10,7 +10,6 @@ import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { searchPlugin } from '@payloadcms/plugin-search'
-import { formBuilderPlugin } from '@payloadcms/plugin-form-builder'
 import { richEditor } from './fields/richTextEditors'
 
 import { Users } from './collections/Users'
@@ -91,15 +90,6 @@ export default buildConfig({
         Icon: '/components/Icon',
       },
     },
-    livePreview: {
-      // Colecciones que tienen vista previa en el panel
-      collections: ['posts', 'products', 'stores', 'pages'],
-      breakpoints: [
-        { label: 'Móvil', name: 'mobile', width: 375, height: 667 },
-        { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
-        { label: 'Escritorio', name: 'desktop', width: 1440, height: 900 },
-      ],
-    },
   },
   // Permite que la web de Astro llame a la API de Payload
   cors: [
@@ -120,7 +110,11 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
+  db: sqliteD1Adapter({
+    binding: cloudflare.env.D1,
+    migrationDir: path.resolve(dirname, 'migrations'),
+    push: false,
+  }),
   logger: isProduction ? cloudflareLogger : undefined,
   plugins: [
     r2Storage({
@@ -155,11 +149,6 @@ export default buildConfig({
           group: 'Utilidades',
         },
       },
-    }),
-    formBuilderPlugin({
-      fields: { payment: false },
-      formOverrides: { admin: { group: 'Formularios' } },
-      formSubmissionOverrides: { admin: { group: 'Formularios' } },
     }),
   ],
 })
