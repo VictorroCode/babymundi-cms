@@ -66,12 +66,15 @@ const cloudflareLogger = {
   silent: () => {},
 } as any // Use PayloadLogger type when it's exported
 
+const isRemoteBindings = isProduction || process.env.CLOUDFLARE_REMOTE === 'true'
 const cloudflare =
   isCLI || !isProduction
-    ? await getCloudflareContextFromWrangler(
-        isProduction || process.env.CLOUDFLARE_REMOTE === 'true',
-      )
+    ? await getCloudflareContextFromWrangler(isRemoteBindings)
     : await getCloudflareContext({ async: true })
+
+console.log(
+  `[DB] mode=${isProduction ? 'production' : isCLI ? 'cli' : 'dev'} | remoteBindings=${isRemoteBindings} | CLOUDFLARE_REMOTE=${process.env.CLOUDFLARE_REMOTE ?? '(unset)'} | NODE_ENV=${process.env.NODE_ENV}`,
+)
 
 export default buildConfig({
   admin: {
@@ -153,12 +156,11 @@ export default buildConfig({
         },
       },
     }),
-    // formBuilderPlugin disabled temporarily for debugging
-    // formBuilderPlugin({
-    //   fields: { payment: false },
-    //   formOverrides: { admin: { group: 'Formularios' } },
-    //   formSubmissionOverrides: { admin: { group: 'Formularios' } },
-    // }),
+    formBuilderPlugin({
+      fields: { payment: false },
+      formOverrides: { admin: { group: 'Formularios' } },
+      formSubmissionOverrides: { admin: { group: 'Formularios' } },
+    }),
   ],
 })
 
