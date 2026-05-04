@@ -1,12 +1,21 @@
 import type { CollectionConfig } from 'payload'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: 'Usuario',
+    plural: '👥 Usuarios',
+  },
   admin: {
     useAsTitle: 'email',
   },
   auth: {
-    useAPIKey: true,
+    cookies: {
+      sameSite: isProduction ? 'None' : 'Lax',
+      secure: isProduction,
+    },
   },
   fields: [
     {

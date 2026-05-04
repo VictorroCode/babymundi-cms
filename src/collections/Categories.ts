@@ -1,10 +1,15 @@
 import type { CollectionConfig } from 'payload'
+import { manualSlugField } from '../fields/slug'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
+  labels: {
+    singular: 'Categoría',
+    plural: '🗂️ Categorías',
+  },
   admin: {
     useAsTitle: 'name',
-    group: 'Taxonomías',
+    group: 'Contenido',
   },
   access: {
     read: () => true,
@@ -16,17 +21,7 @@ export const Categories: CollectionConfig = {
       label: 'Nombre',
       required: true,
     },
-    {
-      name: 'slug',
-      type: 'text',
-      label: 'Slug',
-      required: true,
-      unique: true,
-      index: true,
-      admin: {
-        position: 'sidebar',
-      },
-    },
+    manualSlugField('name'),
     {
       name: 'description',
       type: 'textarea',

@@ -15,15 +15,16 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
-  "d1_databases": [
-    {
-      "binding": "D1",
-      "database_id": "f1c13795-8799-4700-90f1-8638598e1667",
-      "database_name": "babymundi-payload",
-      // Descomenta para usar el D1 remoto de Cloudflare también en local:
-      // "remote": true,
-    },
-  ],
+  // Cloudflare Hyperdrive: acelera conexiones a Neon desde Workers
+  // Para activarlo:
+  //   1. Workers & Pages > Hyperdrive > Create > pega la cadena de conexión de Neon (rama main)
+  //   2. Copia el ID generado, descomenta el bloque y sustitúyelo
+  // "hyperdrive": [
+  //   {
+  //     "binding": "HYPERDRIVE",
+  //     "id": "TU_HYPERDRIVE_ID_AQUI"
+  //   }
+  // ],
   "services": [
     // The service should match the "name" of your worker
     // {
@@ -49,21 +50,6 @@
   // "env": {
   //   "staging": {
   //     "name": "my-app-staging",
-  //     "d1_databases": [
-  //       {
-  //         "binding": "D1",
-  //         "database_id": "DATABASE_ID",
-  //         "database_name": "my-app-staging",
-  //         "remote": true
-  //       }
-  //     ],
-  //     "services": [
-  //       // The service should match the "name" of your worker
-  //       // {
-  //       //   "binding": "WORKER_SELF_REFERENCE",
-  //       //   "service": "my-app-staging"
-  //       // },
-  //     ],
   //     "r2_buckets": [
   //       {
   //         "binding": "R2",

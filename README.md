@@ -1,119 +1,198 @@
-# Payload Cloudflare Template
+# babymundi-cms
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/payloadcms/payload/tree/main/templates/with-cloudflare-d1)
+CMS headless construido con [Payload CMS](https://payloadcms.com/) y desplegado como Cloudflare Worker mediante [OpenNext](https://opennext.js.org/cloudflare). La base de datos es PostgreSQL (Neon) y el almacenamiento de medios usa Cloudflare R2.
 
-**This can only be deployed on Paid Workers right now due to size limits.** This template comes configured with the bare minimum to get started on anything you need.
+---
 
-## Quick start
+## Variables de entorno
 
-This template can be deployed directly to Cloudflare Workers by clicking the button to take you to the setup screen.
+Copia `.env.example` a `.env` y rellena los valores:
 
-From there you can connect your code to a git provider such Github or Gitlab, name your Workers, D1 Database and R2 Bucket as well as attach any additional environment variables or services you need.
+| Variable           | Descripción                                              |
+| ------------------ | -------------------------------------------------------- |
+| `DATABASE_URL`     | Cadena de conexión PostgreSQL (Neon u otro proveedor)   |
+| `PAYLOAD_SECRET`   | Secreto aleatorio para firmar tokens de Payload          |
+| `FRONTEND_URL`     | URL del frontend (para links de previsualización)        |
+| `RESEND_API_KEY`   | API key de [Resend](https://resend.com) para el email    |
+| `EMAIL_FROM_ADDRESS` | Dirección del remitente en los correos                 |
+| `EMAIL_FROM_NAME`  | Nombre del remitente en los correos                      |
+| `PAYLOAD_LOG_LEVEL` | Nivel de log (`debug`, `info`, `warn`, `error`)         |
 
-## Quick Start - local setup
+> En producción las variables se configuran en el panel de Cloudflare Workers (Settings → Variables and Secrets).
 
-To spin up this template locally, follow these steps:
+---
 
-### Clone
+## Instalación
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. Cloudflare will connect your app to a git provider such as Github and you can access your code from there.
+```bash
+pnpm install
+```
 
-### Local Development
+---
 
-## How it works
+## Desarrollo local
 
-Out of the box, using [`Wrangler`](https://developers.cloudflare.com/workers/wrangler/) will automatically create local bindings for you to connect to the remote services and it can even create a local mock of the services you're using with Cloudflare.
+```bash
+# Arrancar servidor de desarrollo (Next.js + Payload admin)
+pnpm dev
 
-We've pre-configured Payload for you with the following:
+# Si hay problemas de caché, borrar .next y .open-next antes
+pnpm devsafe
+```
 
-### Collections
+El admin de Payload estará disponible en `http://localhost:3000/admin`.
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+---
 
-- #### Users (Authentication)
+## Migraciones de esquema (Payload)
 
-  Users are auth-enabled collections that have access to the admin panel.
+Cuando se modifican colecciones o campos en el CMS hay que crear y ejecutar migraciones de base de datos.
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+```bash
+# Crear una nueva migración (genera un fichero en src/migrations/)
+pnpm migrate:generate
 
-- #### Media
+# Ejecutar migraciones pendientes contra la base de datos
+pnpm migrate:run
+```
 
-  This is the uploads enabled collection.
+Las migraciones se crean como ficheros TypeScript en `src/migrations/`. Están versionadas en git y se ejecutan automáticamente en el proceso de despliegue.
 
-### Image Storage (R2)
+---
 
-Images will be served from an R2 bucket which you can then further configure to use a CDN to serve for your frontend directly.
+## Migración de datos (Prismic → Payload)
 
-### D1 Database
+El directorio `migrate/` contiene los scripts para importar contenido desde Prismic. Requiere su propio fichero `.env` — copia `migrate/.env.example` a `migrate/.env`:
 
-The Worker will have direct access to a D1 SQLite database which Wrangler can connect locally to, just note that you won't have a connection string as you would typically with other providers.
+| Variable        | Descripción                               |
+| --------------- | ----------------------------------------- |
+| `PRISMIC_REPO`  | Nombre del repositorio de Prismic         |
 
-You can enable read replicas by adding `readReplicas: 'first-primary'` in the DB adapter and then enabling it on your D1 Cloudflare dashboard. Read more about this feature on [our docs](https://payloadcms.com/docs/database/sqlite#d1-read-replicas).
+### Comandos
 
-## Working with Cloudflare
+```bash
+# Explorar los tipos de documentos disponibles en Prismic antes de migrar
+pnpm migrate:explore
 
-Firstly, after installing dependencies locally you need to authenticate with Wrangler by running:
+# Ejecutar la migración completa (en orden: authors → categories → posts → products → stores → pages)
+pnpm migrate
+
+# Validar la migración: compara recuentos en Prismic vs Payload
+pnpm migrate:validate
+```
+
+> **Orden de migración recomendado:** ejecutar primero `explore` para comprobar que los tipos de Prismic coinciden con el mapeo esperado, luego `migrate` y finalmente `validate`.
+
+---
+
+## Tests
+
+### Tests de integración (Vitest)
+
+Ubicados en `tests/int/`. Son tests offline que no requieren conexión a servicios externos.
+
+```bash
+# Ejecutar todos los tests de integración
+pnpm test:int
+```
+
+### Todos los tests
+
+```bash
+pnpm test
+```
+
+---
+
+## Generación de tipos e importmap
+
+Ejecutar tras cualquier cambio en el esquema de colecciones:
+
+```bash
+# Regenerar tipos TypeScript de Payload y de Cloudflare Workers
+pnpm generate:types
+
+# Solo tipos de Payload
+pnpm generate:types:payload
+
+# Solo tipos de Cloudflare (cloudflare-env.d.ts)
+pnpm generate:types:cloudflare
+
+# Regenerar el importmap del admin (necesario al añadir/mover componentes)
+pnpm generate:importmap
+```
+
+---
+
+## Despliegue en Cloudflare
+
+El proyecto se despliega como un Cloudflare Worker usando `opennextjs-cloudflare`.
+
+### Autenticación con Wrangler
+
+La primera vez, autenticarse con Cloudflare:
 
 ```bash
 pnpm wrangler login
 ```
 
-This will take you to Cloudflare to login and then you can use the Wrangler CLI locally for anything, use `pnpm wrangler help` to see all available options.
-
-Wrangler is pretty smart so it will automatically bind your services for local development just by running `pnpm dev`.
-
-## Deployments
-
-When you're ready to deploy, first make sure you have created your migrations:
+### Despliegue completo
 
 ```bash
-pnpm payload migrate:create
+# Build + migraciones de BD + despliegue del Worker
+pnpm deploy
 ```
 
-Then run the following command:
+Este comando encadena:
+1. `next build` — construye la aplicación
+2. `pnpm deploy:database` — genera y ejecuta migraciones de esquema
+3. `opennextjs-cloudflare build && deploy` — empaqueta y sube el Worker
+
+### Despliegues parciales
 
 ```bash
-pnpm run deploy
+# Solo desplegar la app (sin tocar la base de datos)
+pnpm deploy:app
+
+# Solo aplicar migraciones de base de datos
+pnpm deploy:database
 ```
 
-This will spin up Wrangler in `production` mode, run any created migrations, build the app and then deploy the bundle up to Cloudflare.
+### Preview local del Worker
 
-That's it! You can if you wish move these steps into your CI pipeline as well.
+```bash
+pnpm preview
+```
 
-## Enabling logs
+---
 
-By default logs are not enabled for your API, we've made this decision because it does run against your quota so we've left it opt-in. But you can easily enable logs in one click in the Cloudflare panel, [see docs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs).
+## Cloudflare R2 (almacenamiento de medios)
 
-### Logger Configuration
+Las imágenes se almacenan en un bucket de Cloudflare R2 (`babymundi-assets`). El binding está configurado en `wrangler.jsonc`:
 
-This template includes a custom console-based logger compatible with Cloudflare Workers. Payload's default logger uses `pino-pretty`, which relies on Node.js APIs not available in Workers and would cause `fs.write is not implemented` errors.
+```jsonc
+"r2_buckets": [
+  { "binding": "R2", "bucket_name": "babymundi-assets" }
+]
+```
 
-The custom logger in `payload.config.ts`:
+En desarrollo, Wrangler usa un bucket local simulado automáticamente al ejecutar `pnpm dev`.
 
-- Routes logs through `console.*` methods which Workers handles correctly
-- Outputs JSON-formatted logs for Cloudflare observability
-- Only active in production (development uses the default `pino-pretty` for better DX)
+### Hyperdrive (opcional)
 
-You can control the log level via the `PAYLOAD_LOG_LEVEL` environment variable (e.g., `debug`, `info`, `warn`, `error`).
+Para acelerar las conexiones a Neon desde el Worker se puede habilitar [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/). Instrucciones en el comentario del `wrangler.jsonc`.
 
-### Diagnostic Channel Errors
+---
 
-If you see "Failed to publish diagnostic channel message" errors in your observability logs, these typically come from the `undici` HTTP client library. The template includes `skipSafeFetch: true` in the Media collection to use native fetch instead of undici for file uploads, which helps reduce these errors.
+## Logs en Cloudflare
 
-Cloudflare Workers runs in an [isolated environment that cannot access private IP ranges](https://developers.cloudflare.com/workers-vpc/examples/route-across-private-services/) by default, providing built-in SSRF protection. This makes `skipSafeFetch` safe to use.
+Por defecto los logs no están habilitados para no consumir cuota. Se pueden activar con un clic desde el panel de Cloudflare → Workers → tu worker → Observability → [Enable Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs).
 
-## Known issues
+El logger está configurado en `payload.config.ts` para usar `console.*` (compatible con Workers). El nivel se controla con `PAYLOAD_LOG_LEVEL`.
 
-### GraphQL
+---
 
-We are currently waiting on some issues with GraphQL to be [fixed upstream in Workers](https://github.com/cloudflare/workerd/issues/5175) so full support for GraphQL is not currently guaranteed when deployed.
+## Limitaciones conocidas
 
-### Worker size limits
-
-We currently recommend deploying this template to the Paid Workers plan due to bundle [size limits](https://developers.cloudflare.com/workers/platform/limits/#worker-size) of 3mb. We're actively trying to reduce our bundle footprint over time to better meet this metric.
-
-This also applies to your own code, in the case of importing a lot of libraries you may find yourself limited by the bundle.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+- **Tamaño del Worker:** Cloudflare Workers tiene un límite de 3 MB de bundle. El despliegue requiere el plan de pago. Si al añadir dependencias el bundle crece demasiado, revisar las importaciones.
+- **GraphQL:** El soporte de GraphQL en Workers puede ser inestable por [problemas upstream en workerd](https://github.com/cloudflare/workerd/issues/5175).

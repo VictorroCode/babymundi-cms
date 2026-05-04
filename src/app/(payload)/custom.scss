@@ -13,6 +13,13 @@
   white-space: nowrap;
 }
 
+/* Make brand text in auth/login views significantly larger */
+.login .bm-logo,
+.template-default .bm-logo,
+.auth .bm-logo {
+  font-size: 2.6rem;
+}
+
 /* Ampliar el contenedor del logo en el sidebar de Payload */
 .nav__wrap .nav__header,
 .nav__header {
@@ -26,6 +33,32 @@
   min-width: 140px;
 }
 
+.bm-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: var(--border-radius-s);
+  color: var(--theme-elevation-400);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: var(--theme-elevation-100);
+    color: var(--theme-error-500, #c44);
+  }
+}
+
 .bm-icon {
   font-family: 'Chelsea Market', cursive;
   font-size: 1.2rem;
@@ -34,3 +67,51 @@
   line-height: 1;
   user-select: none;
 }
+
+/* Make top breadcrumbs more generous in admin header */
+.app-header__wrapper .step-nav {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-header__wrapper .step-nav .step-nav__home {
+  width: auto;
+  height: auto;
+  min-width: max-content;
+}
+
+.app-header__wrapper .step-nav span {
+  max-width: clamp(220px, 26vw, 420px);
+}
+
+/* Node 1 (project, right after home icon) */
+.app-header__wrapper .step-nav .step-nav__home + a span {
+  min-width: 9ch;
+  max-width: clamp(240px, 30vw, 480px);
+}
+
+/* Last node (current item) */
+.app-header__wrapper .step-nav a:last-of-type span {
+  max-width: clamp(320px, 42vw, 760px);
+}
+
+@media (max-width: 1024px) {
+  .app-header__wrapper .step-nav .step-nav__home {
+    width: auto;
+    height: auto;
+  }
+
+  .app-header__wrapper .step-nav span {
+    max-width: clamp(160px, 28vw, 280px);
+  }
+
+  .app-header__wrapper .step-nav .step-nav__home + a span {
+    min-width: 9ch;
+    max-width: clamp(180px, 32vw, 320px);
+  }
+
+  .app-header__wrapper .step-nav a:last-of-type span {
+    max-width: clamp(220px, 38vw, 420px);
+  }
+}
+

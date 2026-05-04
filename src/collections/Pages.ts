@@ -1,11 +1,16 @@
 import type { CollectionConfig } from 'payload'
 import { fullEditor } from '../fields/richTextEditors'
+import { manualSlugField } from '../fields/slug'
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
+  labels: {
+    singular: 'Página',
+    plural: '📄 Páginas',
+  },
   admin: {
     useAsTitle: 'title',
-    group: 'Estructura',
+    group: 'Contenido',
     defaultColumns: ['title', 'slug', 'status'],
     preview: (doc) => {
       const slug = doc?.slug === 'home' ? '' : doc?.slug
@@ -29,46 +34,91 @@ export const Pages: CollectionConfig = {
       required: true,
     },
     {
-      name: 'slug',
-      type: 'text',
-      label: 'Slug',
-      required: true,
-      unique: true,
-      index: true,
+      name: 'excerpt',
+      type: 'textarea',
+      label: 'Entradilla',
+      admin: {
+        description: 'Pequeño adelanto que se muestra debajo del título.',
+      },
+    },
+    {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Imagen principal',
+      admin: {
+        description: 'Imagen para listados y cabecera.',
+      },
+    },
+    {
+      name: 'showImageInArticle',
+      type: 'checkbox',
+      label: 'Mostrar imagen dentro del artículo',
+      defaultValue: true,
+    },
+    manualSlugField('title'),
+    {
+      name: 'pageType',
+      type: 'select' as const,
+      options: [
+        { label: 'Artículo', value: 'Article' },
+        { label: 'Guía', value: 'Guide' },
+        { label: 'Landing', value: 'Landing' },
+      ],
+      admin: { description: 'Subtipo de página en Prismic (data.type)' },
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'authors',
+      label: 'Autor',
       admin: { position: 'sidebar' },
     },
     {
-      name: 'hero',
-      type: 'group',
-      label: 'Hero / Cabecera',
-      fields: [
-        {
-          name: 'type',
-          type: 'select',
-          options: [
-            { label: 'Sin hero', value: 'none' },
-            { label: 'Simple (título + imagen)', value: 'simple' },
-            { label: 'Completo (título + subtítulo + CTA)', value: 'full' },
-          ],
-          defaultValue: 'none',
-        },
-        { name: 'heading', type: 'text', label: 'Titular' },
-        { name: 'subheading', type: 'textarea', label: 'Subtítulo' },
-        { name: 'ctaLabel', type: 'text', label: 'Texto del botón CTA' },
-        { name: 'ctaUrl', type: 'text', label: 'URL del CTA' },
-        {
-          name: 'image',
-          type: 'upload',
-          relationTo: 'media',
-          label: 'Imagen del hero',
-        },
-      ],
+      name: 'categories',
+      type: 'relationship',
+      relationTo: 'categories',
+      hasMany: true,
+      label: 'Categorías',
+      admin: {
+        position: 'sidebar',
+        allowCreate: true,
+        allowEdit: true,
+      },
     },
     {
-      name: 'layout',
+      name: 'tags',
+      type: 'relationship',
+      relationTo: 'tags',
+      hasMany: true,
+      label: 'Etiquetas',
+      filterOptions: {
+        type: {
+          in: ['general', 'page'],
+        },
+      },
+      admin: {
+        position: 'sidebar',
+        allowCreate: true,
+        allowEdit: true,
+      },
+    },
+    {
+      name: 'content',
       type: 'blocks',
       label: 'Bloques de contenido',
       blocks: [
+        {
+          slug: 'heroBlock',
+          labels: { singular: 'Hero', plural: 'Bloques Hero' },
+          fields: [
+            { name: 'heading', type: 'text', label: 'Titular', required: true },
+            { name: 'subheading', type: 'textarea', label: 'Subtítulo' },
+            { name: 'ctaLabel', type: 'text', label: 'Texto del botón' },
+            { name: 'ctaUrl', type: 'text', label: 'URL del botón' },
+            { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagen' },
+          ],
+        },
         {
           slug: 'richTextBlock',
           labels: { singular: 'Texto enriquecido', plural: 'Bloques de texto' },
@@ -133,6 +183,16 @@ export const Pages: CollectionConfig = {
       type: 'text',
       label: 'Prismic ID',
       admin: { readOnly: true, position: 'sidebar' },
+    },
+    // --- Metadata ---
+    {
+      name: 'publishedAt',
+      type: 'date' as const,
+      label: 'Fecha de publicación',
+      admin: {
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayAndTime' },
+      },
     },
   ],
 }

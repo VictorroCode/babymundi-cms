@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     authors: Author;
     categories: Category;
+    tags: Tag;
     pages: Page;
     posts: Post;
     products: Product;
@@ -87,6 +88,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    tags: TagsSelect<false> | TagsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
@@ -140,9 +142,6 @@ export interface User {
   role: 'admin' | 'editor';
   updatedAt: string;
   createdAt: string;
-  enableAPIKey?: boolean | null;
-  apiKey?: string | null;
-  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -184,6 +183,10 @@ export interface Media {
 export interface Author {
   id: number;
   name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
   bio?: string | null;
   avatar?: (number | null) | Media;
@@ -193,6 +196,10 @@ export interface Author {
     website?: string | null;
   };
   prismicId?: string | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -203,12 +210,37 @@ export interface Author {
 export interface Category {
   id: number;
   name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
   description?: string | null;
   type?: ('blog' | 'product' | 'store' | 'general') | null;
   parent?: (number | null) | Category;
   image?: (number | null) | Media;
   prismicId?: string | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags".
+ */
+export interface Tag {
+  id: number;
+  name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  type: 'general' | 'product' | 'page';
+  description?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -219,17 +251,39 @@ export interface Category {
 export interface Page {
   id: number;
   title: string;
+  /**
+   * Pequeño adelanto que se muestra debajo del título.
+   */
+  excerpt?: string | null;
+  /**
+   * Imagen para listados y cabecera.
+   */
+  image?: (number | null) | Media;
+  showImageInArticle?: boolean | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
-  hero?: {
-    type?: ('none' | 'simple' | 'full') | null;
-    heading?: string | null;
-    subheading?: string | null;
-    ctaLabel?: string | null;
-    ctaUrl?: string | null;
-    image?: (number | null) | Media;
-  };
-  layout?:
+  /**
+   * Subtipo de página en Prismic (data.type)
+   */
+  pageType?: ('Article' | 'Guide' | 'Landing') | null;
+  author?: (number | null) | Author;
+  categories?: (number | Category)[] | null;
+  tags?: (number | Tag)[] | null;
+  content?:
     | (
+        | {
+            heading: string;
+            subheading?: string | null;
+            ctaLabel?: string | null;
+            ctaUrl?: string | null;
+            image?: (number | null) | Media;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'heroBlock';
+          }
         | {
             content: {
               root: {
@@ -284,6 +338,7 @@ export interface Page {
     | null;
   status: 'draft' | 'published';
   prismicId?: string | null;
+  publishedAt?: string | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -299,6 +354,10 @@ export interface Page {
 export interface Post {
   id: number;
   title: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
   excerpt?: string | null;
   content?: {
@@ -319,12 +378,7 @@ export interface Post {
   coverImage?: (number | null) | Media;
   author?: (number | null) | Author;
   categories?: (number | Category)[] | null;
-  tags?:
-    | {
-        tag?: string | null;
-        id?: string | null;
-      }[]
-    | null;
+  tags?: (number | Tag)[] | null;
   status: 'draft' | 'published';
   publishedAt?: string | null;
   prismicId?: string | null;
@@ -343,6 +397,10 @@ export interface Post {
 export interface Product {
   id: number;
   title: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
   brand?: string | null;
   excerpt?: string | null;
@@ -378,10 +436,66 @@ export interface Product {
   rating?: number | null;
   status: 'draft' | 'published';
   prismicId?: string | null;
-  meta?: {
-    title?: string | null;
-    description?: string | null;
-  };
+  /**
+   * Identificador único para abrir en modal
+   */
+  uid?: string | null;
+  externalSource?: ('raindrop' | 'prismic') | null;
+  externalId?: string | null;
+  sourceUrl?: string | null;
+  /**
+   * URL normalizada del producto
+   */
+  url?: string | null;
+  /**
+   * Nombre original del producto en la fuente
+   */
+  sourceName?: string | null;
+  /**
+   * Nombre normalizado del producto
+   */
+  name?: string | null;
+  store?: (number | null) | Store;
+  category?:
+    | (
+        | 'juguete'
+        | 'juego-de-mesa'
+        | 'libros-y-cuentos'
+        | 'cuidados'
+        | 'alimentacion'
+        | 'ropa'
+        | 'mobiliario'
+        | 'electronica'
+        | 'otros'
+      )
+    | null;
+  tags?: (number | Tag)[] | null;
+  /**
+   * Para libros, juegos de mesa, etc.
+   */
+  authors?:
+    | {
+        author: string;
+        id?: string | null;
+      }[]
+    | null;
+  priceUpdatedAt?: string | null;
+  lastSyncAttemptAt?: string | null;
+  stockStatus?: ('in_stock' | 'out_of_stock' | 'unknown') | null;
+  disableMode?: ('temporary' | 'permanent' | 'manual_review') | null;
+  image?: (number | null) | Media;
+  /**
+   * JSON original para auditoría y para la IA
+   */
+  rawSourceData?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -393,6 +507,10 @@ export interface Product {
 export interface Store {
   id: number;
   name: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
   slug: string;
   type?: ('online' | 'physical' | 'both') | null;
   logo?: (number | null) | Media;
@@ -425,10 +543,17 @@ export interface Store {
   rating?: number | null;
   status: 'draft' | 'published';
   prismicId?: string | null;
-  meta?: {
-    title?: string | null;
-    description?: string | null;
-  };
+  /**
+   * Identificador único, ej: amazon-es
+   */
+  uid?: string | null;
+  /**
+   * Tag para URLs de afiliación, ej: ?tag=micodigo
+   */
+  affiliationTag?: string | null;
+  currency?: string | null;
+  icon?: (number | null) | Media;
+  image?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -500,6 +625,10 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
+        relationTo: 'tags';
+        value: number | Tag;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: number | Page;
       } | null)
@@ -569,9 +698,6 @@ export interface UsersSelect<T extends boolean = true> {
   role?: T;
   updatedAt?: T;
   createdAt?: T;
-  enableAPIKey?: T;
-  apiKey?: T;
-  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -609,6 +735,7 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface AuthorsSelect<T extends boolean = true> {
   name?: T;
+  generateSlug?: T;
   slug?: T;
   bio?: T;
   avatar?: T;
@@ -620,6 +747,12 @@ export interface AuthorsSelect<T extends boolean = true> {
         website?: T;
       };
   prismicId?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -629,12 +762,32 @@ export interface AuthorsSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
+  generateSlug?: T;
   slug?: T;
   description?: T;
   type?: T;
   parent?: T;
   image?: T;
   prismicId?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags_select".
+ */
+export interface TagsSelect<T extends boolean = true> {
+  name?: T;
+  generateSlug?: T;
+  slug?: T;
+  type?: T;
+  description?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -644,20 +797,29 @@ export interface CategoriesSelect<T extends boolean = true> {
  */
 export interface PagesSelect<T extends boolean = true> {
   title?: T;
+  excerpt?: T;
+  image?: T;
+  showImageInArticle?: T;
+  generateSlug?: T;
   slug?: T;
-  hero?:
+  pageType?: T;
+  author?: T;
+  categories?: T;
+  tags?: T;
+  content?:
     | T
     | {
-        type?: T;
-        heading?: T;
-        subheading?: T;
-        ctaLabel?: T;
-        ctaUrl?: T;
-        image?: T;
-      };
-  layout?:
-    | T
-    | {
+        heroBlock?:
+          | T
+          | {
+              heading?: T;
+              subheading?: T;
+              ctaLabel?: T;
+              ctaUrl?: T;
+              image?: T;
+              id?: T;
+              blockName?: T;
+            };
         richTextBlock?:
           | T
           | {
@@ -701,6 +863,7 @@ export interface PagesSelect<T extends boolean = true> {
       };
   status?: T;
   prismicId?: T;
+  publishedAt?: T;
   meta?:
     | T
     | {
@@ -717,18 +880,14 @@ export interface PagesSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
+  generateSlug?: T;
   slug?: T;
   excerpt?: T;
   content?: T;
   coverImage?: T;
   author?: T;
   categories?: T;
-  tags?:
-    | T
-    | {
-        tag?: T;
-        id?: T;
-      };
+  tags?: T;
   status?: T;
   publishedAt?: T;
   prismicId?: T;
@@ -748,6 +907,7 @@ export interface PostsSelect<T extends boolean = true> {
  */
 export interface ProductsSelect<T extends boolean = true> {
   title?: T;
+  generateSlug?: T;
   slug?: T;
   brand?: T;
   excerpt?: T;
@@ -771,12 +931,28 @@ export interface ProductsSelect<T extends boolean = true> {
   rating?: T;
   status?: T;
   prismicId?: T;
-  meta?:
+  uid?: T;
+  externalSource?: T;
+  externalId?: T;
+  sourceUrl?: T;
+  url?: T;
+  sourceName?: T;
+  name?: T;
+  store?: T;
+  category?: T;
+  tags?: T;
+  authors?:
     | T
     | {
-        title?: T;
-        description?: T;
+        author?: T;
+        id?: T;
       };
+  priceUpdatedAt?: T;
+  lastSyncAttemptAt?: T;
+  stockStatus?: T;
+  disableMode?: T;
+  image?: T;
+  rawSourceData?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -787,6 +963,7 @@ export interface ProductsSelect<T extends boolean = true> {
  */
 export interface StoresSelect<T extends boolean = true> {
   name?: T;
+  generateSlug?: T;
   slug?: T;
   type?: T;
   logo?: T;
@@ -805,12 +982,11 @@ export interface StoresSelect<T extends boolean = true> {
   rating?: T;
   status?: T;
   prismicId?: T;
-  meta?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-      };
+  uid?: T;
+  affiliationTag?: T;
+  currency?: T;
+  icon?: T;
+  image?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;

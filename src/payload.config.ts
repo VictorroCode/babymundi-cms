@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { buildConfig } from 'payload'
 import { es } from '@payloadcms/translations/languages/es'
 import { en } from '@payloadcms/translations/languages/en'
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
 import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
+import { resendAdapter } from '@payloadcms/email-resend'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { searchPlugin } from '@payloadcms/plugin-search'
 import { richEditor } from './fields/richTextEditors'
@@ -20,6 +21,7 @@ import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Products } from './collections/Products'
 import { Stores } from './collections/Stores'
+import { Tags } from './collections/Tags'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -70,6 +72,14 @@ const cloudflare =
   isCLI || !isProduction
     ? await getCloudflareContextFromWrangler(isRemoteBindings)
     : await getCloudflareContext({ async: true })
+const hyperdriveConnectionString = (
+  cloudflare?.env as { HYPERDRIVE?: { connectionString?: string } }
+)?.HYPERDRIVE?.connectionString
+
+const adminURL =
+  process.env.NEXT_PUBLIC_SERVER_URL || process.env.SERVER_URL || 'http://localhost:3000'
+const frontendURL = process.env.FRONTEND_URL || 'http://localhost:4321'
+const allowedOrigins = Array.from(new Set([adminURL, frontendURL]))
 
 console.log(
   `[DB] mode=${isProduction ? 'production' : isCLI ? 'cli' : 'dev'} | remoteBindings=${isRemoteBindings} | CLOUDFLARE_REMOTE=${process.env.CLOUDFLARE_REMOTE ?? '(unset)'} | NODE_ENV=${process.env.NODE_ENV}`,
@@ -89,31 +99,42 @@ export default buildConfig({
         Logo: '/components/Logo',
         Icon: '/components/Icon',
       },
+      logout: {
+        Button: '/components/LogoutButton',
+      },
     },
   },
+  auth: {
+    jwtOrder: ['cookie'],
+  },
   // Permite que la web de Astro llame a la API de Payload
-  cors: [
-    process.env.FRONTEND_URL || 'http://localhost:4321',
-    'http://localhost:4321', // Astro dev server
-  ].filter(Boolean),
+  cors: allowedOrigins,
   // Permite embeber el admin en iframes desde el dominio de Astro (livePreview)
-  csrf: [process.env.FRONTEND_URL || 'http://localhost:4321', 'http://localhost:4321'].filter(
-    Boolean,
-  ),
+  csrf: allowedOrigins,
   i18n: {
     supportedLanguages: { es, en },
     fallbackLanguage: 'es',
   },
-  collections: [Users, Media, Authors, Categories, Pages, Posts, Products, Stores],
+  collections: [Users, Media, Authors, Categories, Tags, Pages, Posts, Products, Stores],
   editor: richEditor,
   secret: process.env.PAYLOAD_SECRET || '',
+  email: resendAdapter({
+    defaultFromAddress: process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
+    defaultFromName: process.env.EMAIL_FROM_NAME || 'Babymundi',
+    apiKey: process.env.RESEND_API_KEY || '',
+  }),
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: sqliteD1Adapter({
-    binding: cloudflare.env.D1,
+  db: postgresAdapter({
+    pool: {
+      // En producción (Workers): usa Hyperdrive para acelerar las conexiones a Neon
+      // En local dev / CLI: usa siempre DATABASE_URL directamente (nunca Hyperdrive)
+      connectionString: isProduction
+        ? (hyperdriveConnectionString ?? process.env.DATABASE_URL ?? '')
+        : (process.env.DATABASE_URL ?? ''),
+    },
     migrationDir: path.resolve(dirname, 'migrations'),
-    push: false,
   }),
   logger: isProduction ? cloudflareLogger : undefined,
   plugins: [
@@ -122,14 +143,15 @@ export default buildConfig({
       collections: { media: true },
     }),
     seoPlugin({
-      collections: ['posts', 'products', 'stores', 'pages'],
-      generateTitle: ({ doc }) => `${doc?.title} | Babymundi`,
-      generateDescription: ({ doc }) => doc?.excerpt || doc?.description || '',
+      collections: ['posts', 'categories', 'authors', 'pages'],
+      tabbedUI: false,
+      generateTitle: ({ doc }) => `${doc?.title || doc?.name || ''} | Babymundi`,
+      generateDescription: ({ doc }) => doc?.excerpt || doc?.description || doc?.bio || '',
       generateURL: ({ doc, collectionConfig }) => {
         const paths: Record<string, string> = {
           posts: 'blog',
-          products: 'productos',
-          stores: 'tiendas',
+          categories: 'categorias',
+          authors: 'autores',
           pages: '',
         }
         const base = process.env.FRONTEND_URL || ''
@@ -145,6 +167,10 @@ export default buildConfig({
         stores: 30,
       },
       searchOverrides: {
+        labels: {
+          singular: '🔎 Search',
+          plural: '🔎 Search',
+        },
         admin: {
           group: 'Utilidades',
         },

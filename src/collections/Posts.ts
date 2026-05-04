@@ -1,8 +1,13 @@
 import type { CollectionConfig } from 'payload'
 import { fullEditor } from '../fields/richTextEditors'
+import { manualSlugField } from '../fields/slug'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
+  labels: {
+    singular: 'Post',
+    plural: '📝 Posts',
+  },
   admin: {
     useAsTitle: 'title',
     group: 'Contenido',
@@ -34,15 +39,7 @@ export const Posts: CollectionConfig = {
       label: 'Título',
       required: true,
     },
-    {
-      name: 'slug',
-      type: 'text',
-      label: 'Slug',
-      required: true,
-      unique: true,
-      index: true,
-      admin: { position: 'sidebar' },
-    },
+    manualSlugField('title'),
     {
       name: 'excerpt',
       type: 'textarea',
@@ -77,10 +74,20 @@ export const Posts: CollectionConfig = {
     },
     {
       name: 'tags',
-      type: 'array',
+      type: 'relationship',
+      relationTo: 'tags',
+      hasMany: true,
       label: 'Etiquetas',
-      fields: [{ name: 'tag', type: 'text' }],
-      admin: { position: 'sidebar' },
+      filterOptions: {
+        type: {
+          equals: 'general',
+        },
+      },
+      admin: {
+        position: 'sidebar',
+        allowCreate: true,
+        allowEdit: true,
+      },
     },
     {
       name: 'status',

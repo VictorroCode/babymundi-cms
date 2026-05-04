@@ -1,3 +1,3 @@
 export default function Icon() {
-  return <span className="bm-icon">bm</span>
+  return <span className="bm-icon">babymundi</span>
 }

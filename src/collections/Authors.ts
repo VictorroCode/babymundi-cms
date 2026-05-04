@@ -1,7 +1,12 @@
 import type { CollectionConfig } from 'payload'
+import { manualSlugField } from '../fields/slug'
 
 export const Authors: CollectionConfig = {
   slug: 'authors',
+  labels: {
+    singular: 'Autor',
+    plural: '✍️ Autores',
+  },
   admin: {
     useAsTitle: 'name',
     group: 'Contenido',
@@ -16,17 +21,7 @@ export const Authors: CollectionConfig = {
       label: 'Nombre',
       required: true,
     },
-    {
-      name: 'slug',
-      type: 'text',
-      label: 'Slug',
-      required: true,
-      unique: true,
-      index: true,
-      admin: {
-        position: 'sidebar',
-      },
-    },
+    manualSlugField('name'),
     {
       name: 'bio',
       type: 'textarea',

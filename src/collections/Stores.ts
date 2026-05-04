@@ -1,8 +1,13 @@
 import type { CollectionConfig } from 'payload'
 import { richEditor } from '../fields/richTextEditors'
+import { manualSlugField } from '../fields/slug'
 
 export const Stores: CollectionConfig = {
   slug: 'stores',
+  labels: {
+    singular: 'Tienda',
+    plural: '🏬 Tiendas',
+  },
   admin: {
     useAsTitle: 'name',
     group: 'Contenido',
@@ -25,15 +30,7 @@ export const Stores: CollectionConfig = {
       label: 'Nombre de la tienda',
       required: true,
     },
-    {
-      name: 'slug',
-      type: 'text',
-      label: 'Slug',
-      required: true,
-      unique: true,
-      index: true,
-      admin: { position: 'sidebar' },
-    },
+    manualSlugField('name'),
     {
       name: 'type',
       type: 'select',
@@ -119,6 +116,42 @@ export const Stores: CollectionConfig = {
       type: 'text',
       label: 'Prismic ID',
       admin: { readOnly: true, position: 'sidebar' },
+    },
+
+    // --- Sync / Identity ---
+    {
+      name: 'uid',
+      type: 'text',
+      label: 'UID',
+      unique: true,
+      admin: { description: 'Identificador único, ej: amazon-es', position: 'sidebar' },
+    },
+    {
+      name: 'affiliationTag',
+      type: 'text',
+      label: 'Tag de afiliación',
+      admin: { description: 'Tag para URLs de afiliación, ej: ?tag=micodigo', position: 'sidebar' },
+    },
+    {
+      name: 'currency',
+      type: 'text',
+      label: 'Moneda',
+      defaultValue: 'EUR',
+      admin: { position: 'sidebar' },
+    },
+
+    // --- Media (sync) ---
+    {
+      name: 'icon',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Icono',
+    },
+    {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Imagen (sync)',
     },
   ],
 }
